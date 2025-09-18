@@ -1,0 +1,131 @@
+/*
+  War Estruturado - Desafio Final (Missões Estratégicas)
+  - Modularizado: funções para cadastro, exibição, ataque, atribuição/verificação de missão e liberação de memória.
+  - Missões armazenadas dinamicamente (malloc) por jogador.
+  - Uso de ponteiros para manipular territórios e missões.
+  - Verificação de missão ao final de cada turno (declara vencedor se cumprida).
+  - Autor: (seu nome)
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <ctype.h>
+
+#define MAX_NOME 30
+#define MAX_COR 10
+
+/* Struct que representa um território */
+typedef struct {
+    char nome[MAX_NOME];
+    char cor[MAX_COR];
+    int tropas;
+} Territorio;
+
+/* Struct que representa um jogador, incluindo sua missão (alocada dinamicamente) */
+typedef struct {
+    char nome[MAX_NOME];
+    char cor[MAX_COR];
+    char *missao;      // ponteiro para missão (malloc)
+    int missaoIndex;   // índice da missão no vetor de missoes (facilita verificação)
+} Jogador;
+
+/* --- Protótipos --- */
+void cadastrarTerritorios(Territorio *mapa, int n);
+void exibirTerritorios(Territorio *mapa, int n);
+void liberarMapa(Territorio *mapa);
+
+void atribuirMissao(Jogador *jogador, char *missoes[], int totalMissoes);
+void exibirMissao(Jogador *jogador);
+int verificarMissao(Jogador *jogador, Territorio *mapa, int tamanho, Jogador *todosJogadores, int numJogadores);
+void liberarMissoes(Jogador *jogadores, int numJogadores);
+
+void atacar(Territorio *atacante, Territorio *defensor);
+int corEquals(const char *a, const char *b); // compara cores sem diferenciar maiúsculas/minúsculas
+int contarTerritoriosPorCor(Territorio *mapa, int tamanho, const char *cor);
+int contarTropasPorCor(Territorio *mapa, int tamanho, const char *cor);
+
+int main() {
+    srand((unsigned int) time(NULL)); // aleatoriedade
+
+    /* vetor de missões pré-definidas (mínimo 5) */
+    char *missoes[] = {
+        "Conquistar 3 territorios seguidos",
+        "Eliminar todas as tropas da cor vermelha",
+        "Controlar 50% dos territorios",
+        "Controlar todos os territorios com 'Norte' no nome",
+        "Ter mais tropas que qualquer outro jogador"
+    };
+    int totalMissoes = sizeof(missoes) / sizeof(missoes[0]);
+
+    int numJogadores;
+    printf("Quantidade de jogadores: ");
+    if (scanf("%d", &numJogadores) != 1 || numJogadores <= 0) {
+        printf("Número inválido. Encerrando.\n");
+        return 1;
+    }
+
+    /* criar vetor de jogadores dinamicamente */
+    Jogador *jogadores = (Jogador*) calloc(numJogadores, sizeof(Jogador));
+    if (!jogadores) {
+        printf("Falha na alocação de jogadores.\n");
+        return 1;
+    }
+
+    /* cadastro dos jogadores (nome e cor) */
+    for (int i = 0; i < numJogadores; i++) {
+        printf("\n--- Jogador %d ---\n", i + 1);
+        printf("Nome: ");
+        scanf(" %[^\n]", jogadores[i].nome);
+        printf("Cor (use um nome curto, ex: azul, vermelho): ");
+        scanf(" %[^\n]", jogadores[i].cor);
+        jogadores[i].missao = NULL;
+        jogadores[i].missaoIndex = -1;
+    }
+
+    /* atribuir missões aleatórias a cada jogador (missão armazenada com malloc) */
+    for (int i = 0; i < numJogadores; i++) {
+        atribuirMissao(&jogadores[i], missoes, totalMissoes);
+    }
+
+    int numTerritorios;
+    printf("\nQuantos territórios deseja cadastrar no mapa? ");
+    if (scanf("%d", &numTerritorios) != 1 || numTerritorios <= 0) {
+        printf("Número inválido de territórios. Encerrando.\n");
+        liberarMissoes(jogadores, numJogadores);
+        free(jogadores);
+        return 1;
+    }
+
+    /* alocar mapa dinamicamente */
+    Territorio *mapa = (Territorio*) calloc(numTerritorios, sizeof(Territorio));
+    if (!mapa) {
+        printf("Falha na alocação do mapa.\n");
+        liberarMissoes(jogadores, numJogadores);
+        free(jogadores);
+        return 1;
+    }
+
+    /* cadastrar territórios */
+    cadastrarTerritorios(mapa, numTerritorios);
+    exibirTerritorios(mapa, numTerritorios);
+
+    /* exibir missão de cada jogador (apenas uma vez no início) */
+    printf("\n===== MISSÕES DOS JOGADORES =====\n");
+    for (int i = 0; i < numJogadores; i++) {
+        printf("Jogador %s (cor: %s) -> ", jogadores[i].nome, jogadores[i].cor);
+        exibirMissao(&jogadores[i]);
+    }
+    printf("=================================\n");
+
+    /* loop de jogo: turno por turno até alguém cumprir a missão ou o usuário encerrar */
+    int vencedor = -1;
+    int turno = 0;
+    while (1) {
+        int current = turno % numJogadores;
+        Jogador *j = &jogadores[current];
+        printf("\n--- Turno de %s (cor: %s) ---\n", j->nome, j->cor);
+
+        /* verificar silenciosamente se já cumpriu antes de agir */
+        if (verificarMissao(j, mapa, numTerritorios, jogadores, nu
