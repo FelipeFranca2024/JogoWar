@@ -1,0 +1,57 @@
+/*
+  War Estruturado - Nível Aventureiro
+  - Usa structs para representar territórios
+  - Aloca dinamicamente um vetor de Territorio com calloc
+  - Implementa função de ataque usando ponteiros: void atacar(Territorio* atacante, Territorio* defensor)
+  - Atualiza cor e tropas do defensor quando o atacante vence (metade das tropas do atacante é transferida)
+  - Validações: índices, não atacar território da mesma cor, atacante precisa ter tropas suficientes
+  - Libera memória ao final com free
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+
+typedef struct {
+    char nome[30];   // nome do território
+    char cor[10];    // cor do exército (dono)
+    int tropas;      // quantidade de tropas
+} Territorio;
+
+/* Função para cadastrar territórios (usa ponteiro para o vetor alocado) */
+void cadastrarTerritorios(Territorio* mapa, int n) {
+    for (int i = 0; i < n; i++) {
+        printf("\n--- Cadastro do Território %d de %d ---\n", i + 1, n);
+        printf("Nome do território: ");
+        scanf(" %[^\n]", (mapa + i)->nome);     // lê até newline (aceita espaços)
+        printf("Cor do exército: ");
+        scanf(" %[^\n]", (mapa + i)->cor);
+        printf("Quantidade de tropas: ");
+        scanf("%d", &(mapa + i)->tropas);
+        if ((mapa + i)->tropas < 0) (mapa + i)->tropas = 0;
+    }
+}
+
+/* Função para exibir o mapa de territórios (usa ponteiro) */
+void exibirTerritorios(Territorio* mapa, int n) {
+    printf("\n===== MAPA DE TERRITÓRIOS =====\n");
+    for (int i = 0; i < n; i++) {
+        Territorio* t = mapa + i; // ponteiro para o território i
+        printf("(%d) %s | Cor: %s | Tropas: %d\n",
+               i + 1, t->nome, t->cor, t->tropas);
+    }
+    printf("================================\n");
+}
+
+/*
+  Função de ataque:
+  - Cada lado rola um dado (1..6) via rand()
+  - Se atacante vencer (dado > defensor): defensor perde dono e recebe metade das tropas do atacante
+  - Caso contrário: atacante perde 1 tropa
+  - Todas as alterações são feitas via ponteiros para as structs
+*/
+void atacar(Territorio* atacante, Territorio* defensor) {
+    // validação básica: atacante deve ter pelo menos 2 tropas para que uma transferência faça sentido
+    if (atacante->tropas < 2) {
+        printf("Ataque inválido: o território atacante precisa ter pelo menos 2 tropas (atual:
